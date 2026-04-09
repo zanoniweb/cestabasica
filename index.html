@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DE GESTÃO DE INSUMOS - CRAS ANA ROSA</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2c3e50; 
+            --secondary: #34495e; 
+            --accent: #3498db;
+            --success: #27ae60; 
+            --danger: #e74c3c; 
+            --light: #f4f7f6;
+            --warning: #f39c12;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--light); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        .logo-container { display: flex; justify-content: center; padding: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--primary); }
+        .logo-cras { display: flex; flex-direction: column; align-items: center; }
+        .sigla { font-size: 38px; font-weight: 900; color: var(--primary); margin: 0; }
+        .nome { font-size: 16px; color: var(--accent); text-transform: uppercase; letter-spacing: 4px; margin-top: -5px; }
+        
+        .header-title { text-align: center; color: var(--secondary); margin-bottom: 30px; }
+        .header-title h2 { margin: 5px 0; text-transform: uppercase; font-size: 1.2em; }
+
+        .summary-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { padding: 20px; background: white; border-radius: 8px; text-align: center; border: 1px solid #ddd; border-top: 5px solid var(--accent); }
+        .card h4 { margin: 0 0 10px 0; color: var(--secondary); font-size: 0.9em; text-transform: uppercase; }
+        .card span { font-size: 2em; font-weight: bold; color: var(--primary); }
+
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        @media (max-width: 850px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .form-section { padding: 20px; border-radius: 8px; border: 1px solid #eee; background: #fff; }
+        .form-section h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.1em; color: var(--primary); }
+
+        .input-box { margin-bottom: 15px; display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 0.85em; color: var(--secondary); }
+        input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
+
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; color: white; text-transform: uppercase; }
+        .btn-in { background: var(--success); }
+        .btn-out { background: var(--danger); }
+        .btn-util { background: var(--secondary); margin-top: 10px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: var(--primary); color: white; text-transform: uppercase; }
+        tr:nth-child(even) { background: #f8f9fa; }
+
+        .btn-group-reports { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+        .btn-report { width: auto; min-width: 200px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-container">
+        <div class="logo-cras">
+            <span class="sigla">CRAS</span>
+            <span class="nome">Ana Rosa</span>
+        </div>
+    </div>
+
+    <div class="header-title">
+        <h2>Estado do Paraná</h2>
+        <h3>Secretaria Municipal de Assistência Social</h3>
+        <p>Sistema de Controle de Benefícios Eventuais (Cestas Básicas)</p>
+    </div>
+
+    <div class="summary-box">
+        <div class="card"><h4>Entradas Totais</h4><span id="txtEntradas">0</span></div>
+        <div class="card"><h4>Saídas Totais</h4><span id="txtSaidas">0</span></div>
+        <div class="card" style="border-top-color: var(--success)"><h4>Saldo em Almoxarifado</h4><span id="txtSaldo">0</span></div>
+    </div>
+
+    <div class="main-grid">
+        <div class="form-section">
+            <h3>📥 Registro de Aporte (Entrada)</h3>
+            <form id="formEntrada">
+                <div class="input-box">
+                    <label>RAZÃO SOCIAL DO FORNECEDOR</label>
+                    <input type="text" id="fornecedor" placeholder="Ex: Distribuidora de Alimentos LTDA" required>
+                </div>
+                <div class="input-box">
+                    <label>CNPJ DO FORNECEDOR</label>
+                    <input type="text" id="cnpj" class="mask-cnpj" placeholder="00.000.000/0000-00" required>
+                </div>
+                <div class="input-box">
+                    <label>QUANTIDADE APORTADA</label>
+                    <input type="number" id="qtdIn" min="1" required>
+                </div>
+                <button type="submit" class="btn btn-in">Confirmar Recebimento</button>
+            </form>
+        </div>
+
+        <div class="form-section" style="background: #fffafa;">
+            <h3>📤 Registro de Concessão (Saída)</h3>
+            <form id="formSaida">
+                <div class="input-box">
+                    <label>CPF DO BENEFICIÁRIO</label>
+                    <input type="text" id="cpf" class="mask-cpf" placeholder="000.000.000-00" required>
+                </div>
+                <div class="input-box">
+                    <label>NOME COMPLETO DO REQUISITANTE</label>
+                    <input type="text" id="beneficiario" placeholder="Conforme Cadastro Único" required>
+                </div>
+                <div class="input-box">
+                    <label>QUANTIDADE CONCEDIDA</label>
+                    <input type="number" id="qtdOut" value="1" readonly>
+                </div>
+                <button type="submit" class="btn btn-out">Registrar Entrega</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>📋 Histórico de Movimentações</h3>
+        <div style="overflow-x: auto;">
+            <table id="tabelaMovimentos">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Operação</th>
+                        <th>Qtd</th>
+                        <th>Interessado (Fornecedor/Cidadão)</th>
+                        <th>Documento (CNPJ/CPF)</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela"></tbody>
+            </table>
+        </div>
+        
+        <div class="btn-group-reports">
+            <button onclick="gerarRelatorioOficial()" class="btn btn-util btn-report" style="background: #d32f2f;">📄 Gerar Relatório Técnico (PDF)</button>
+            <button onclick="exportarExcel()" class="btn btn-util btn-report" style="background: #1d6f42;">📈 Exportar Planilha (XLSX)</button>
+        </div>
+        <button onclick="limparBanco()" class="btn btn-util" style="background: #95a5a6; width: auto; margin: 20px auto; display: block;">🗑️ Reinicializar Banco de Dados</button>
+    </div>
+</div>
+
+<script>
+    const DB_NAME = 'cras_ana_rosa_cestas';
+
+    // --- MÁSCARAS E VALIDAÇÕES ---
+    function aplicarMascaras() {
+        const inputCpf = document.querySelector('.mask-cpf');
+        inputCpf.addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.slice(0, 11); // Trava em 11 números
+            v = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            e.target.value = v;
+        });
+
+        const inputCnpj = document.querySelector('.mask-cnpj');
+        inputCnpj.addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g, "");
+            if (v.length > 14) v = v.slice(0, 14);
+            v = v.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+            e.target.value = v;
+        });
+    }
+
+    // --- LÓGICA DE DADOS ---
+    function obterDados() {
+        return JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    }
+
+    function salvarDados(dados) {
+        localStorage.setItem(DB_NAME, JSON.stringify(dados));
+        renderizar();
+    }
+
+    function renderizar() {
+        const movs = obterDados();
+        let totalIn = 0, totalOut = 0;
+        
+        const corpo = document.getElementById('corpoTabela');
+        corpo.innerHTML = '';
+
+        movs.slice().reverse().forEach(m => {
+            if(m.tipo === 'ENTRADA') totalIn += m.qtd;
+            else totalOut += m.qtd;
+
+            corpo.innerHTML += `
+                <tr>
+                    <td>${m.data}</td>
+                    <td style="color: ${m.tipo === 'ENTRADA' ? 'green' : 'red'}; font-weight:bold">${m.tipo}</td>
+                    <td>${m.qtd}</td>
+                    <td>${m.entidade}</td>
+                    <td>${m.doc}</td>
+                    <td><button onclick="excluirRegistro(${m.id})" style="border:none; background:none; cursor:pointer">🗑️</button></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('txtEntradas').innerText = totalIn;
+        document.getElementById('txtSaidas').innerText = totalOut;
+        document.getElementById('txtSaldo').innerText = totalIn - totalOut;
+    }
+
+    // --- EVENTOS ---
+    document.getElementById('formEntrada').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const novo = {
+            id: Date.now(),
+            data: new Date().toLocaleString('pt-BR'),
+            tipo: 'ENTRADA',
+            qtd: parseInt(document.getElementById('qtdIn').value),
+            entidade: document.getElementById('fornecedor').value.toUpperCase(),
+            doc: document.getElementById('cnpj').value
+        };
+        const dados = obterDados();
+        dados.push(novo);
+        salvarDados(dados);
+        this.reset();
+    });
+
+    document.getElementById('formSaida').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const dados = obterDados();
+        const saldo = parseInt(document.getElementById('txtSaldo').innerText);
+
+        if(saldo <= 0) {
+            alert("Operação Interrompida: Saldo insuficiente em estoque.");
+            return;
+        }
+
+        const novo = {
+            id: Date.now(),
+            data: new Date().toLocaleString('pt-BR'),
+            tipo: 'SAÍDA',
+            qtd: 1,
+            entidade: document.getElementById('beneficiario').value.toUpperCase(),
+            doc: document.getElementById('cpf').value
+        };
+        dados.push(novo);
+        salvarDados(dados);
+        this.reset();
+    });
+
+    function excluirRegistro(id) {
+        if(confirm("Confirmar a exclusão deste registro oficial?")) {
+            const dados = obterDados().filter(d => d.id !== id);
+            salvarDados(dados);
+        }
+    }
+
+    function limparBanco() {
+        if(confirm("Deseja apagar todos os registros do sistema? Esta ação é irreversível.")) {
+            localStorage.removeItem(DB_NAME);
+            renderizar();
+        }
+    }
+
+    // --- RELATÓRIOS (REDAÇÃO TÉCNICA OFICIAL) ---
+    function gerarRelatorioOficial() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const dados = obterDados();
+        const dataEmissao = new Date().toLocaleString('pt-BR');
+
+        // Cabeçalho Institucional
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("ESTADO DO PARANÁ", 105, 20, { align: 'center' });
+        doc.text("SECRETARIA MUNICIPAL DE ASSISTÊNCIA SOCIAL", 105, 27, { align: 'center' });
+        doc.text("UNIDADE: CRAS ANA ROSA", 105, 34, { align: 'center' });
+        
+        doc.setLineWidth(0.5);
+        doc.line(20, 38, 190, 38);
+
+        // Título do Documento
+        doc.setFontSize(14);
+        doc.text("RELATÓRIO TÉCNICO DE MOVIMENTAÇÃO DE INSUMOS", 105, 50, { align: 'center' });
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Data de Emissão: ${dataEmissao}`, 20, 60);
+        doc.text("Assunto: Controle de estoque e concessão de Cestas Básicas.", 20, 65);
+
+        // Tabela de Dados
+        doc.autoTable({
+            startY: 75,
+            head: [['DATA/HORA', 'OPERAÇÃO', 'QTD', 'INTERESSADO', 'CPF/CNPJ']],
+            body: dados.map(m => [m.data, m.tipo, m.qtd, m.entidade, m.doc]),
+            headStyles: { fillColor: [44, 62, 80] },
+            theme: 'grid'
+        });
+
+        // Resumo Técnico
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFont("helvetica", "bold");
+        doc.text("PARECER QUANTITATIVO:", 20, finalY);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Total de Aportes (Entradas): ${document.getElementById('txtEntradas').innerText} unidades.`, 20, finalY + 7);
+        doc.text(`Total de Concessões (Saídas): ${document.getElementById('txtSaidas').innerText} unidades.`, 20, finalY + 14);
+        doc.text(`Saldo Atual em Reservado: ${document.getElementById('txtSaldo').innerText} unidades.`, 20, finalY + 21);
+
+        // Assinatura
+        doc.line(60, finalY + 45, 150, finalY + 45);
+        doc.text("Responsável pela Unidade / Almoxarifado", 105, finalY + 52, { align: 'center' });
+
+        doc.save(`Relatorio_Tecnico_CRAS_Ana_Rosa.pdf`);
+    }
+
+    function exportarExcel() {
+        const dados = obterDados();
+        const ws = XLSX.utils.json_to_sheet(dados);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Movimentacoes");
+        XLSX.writeFile(wb, "Controle_Estoque_CRAS.xlsx");
+    }
+
+    window.onload = () => {
+        aplicarMascaras();
+        renderizar();
+    };
+</script>
+
+</body>
+</html>
